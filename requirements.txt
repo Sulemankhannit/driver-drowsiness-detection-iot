@@ -1,0 +1,9 @@
+opencv-python
+scipy
+imutils
+numpy
+dlib
+face_recognition
+twilio
+python-pushover
+RPi.GPIO
