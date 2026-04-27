@@ -1,4 +1,4 @@
-# ------------------ Import Required Libraries ------------------
+#  Import Required Libraries 
 import cv2
 from scipy.spatial import distance
 import RPi.GPIO as GPIO
@@ -12,7 +12,7 @@ from twilio.rest import Client as TwilioClient
 import face_recognition
 import os
 
-# ------------------ Cloud Service Credentials ------------------
+#  Cloud Service Credentials 
 PUSHOVER_USER_KEY = "YOUR_PUSHOVER_USER_KEY"
 PUSHOVER_API_TOKEN = "YOUR_PUSHOVER_API_TOKEN"
 TWILIO_ACCOUNT_SID = "YOUR_TWILIO_SID"
@@ -20,12 +20,12 @@ TWILIO_AUTH_TOKEN = "YOUR_TWILIO_AUTH_TOKEN"
 TWILIO_PHONE_NUMBER = "YOUR_TWILIO_NUMBER"
 EMERGENCY_CONTACT_NUMBER = "YOUR_EMERGENCY_NUMBER"
 
-# ------------------ Initialize Cloud Clients ------------------
+#Initialize Cloud Clients 
 pushover_client = PushoverClient(PUSHOVER_USER_KEY, api_token=PUSHOVER_API_TOKEN)
 twilio_client = TwilioClient(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 
 
-# ------------------ Cloud Alert Functions ------------------
+#  Cloud Alert Functions 
 def send_phone_alarm(message, title="Driver Alert!", priority=1):
     """Send push notification to mobile using Pushover app."""
     print(f"Sending Pushover alert: {title}")
@@ -50,7 +50,7 @@ def make_emergency_call():
         print(f"Failed to make Twilio call: {e}")
 
 
-# ------------------ GPIO Setup for Local Alerts ------------------
+# GPIO Setup for Local Alerts 
 GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
 SPEAKER_PIN = 21
@@ -60,7 +60,7 @@ GPIO.setup(LED_PIN, GPIO.OUT)
 pwm = GPIO.PWM(SPEAKER_PIN, 440)
 
 
-# ------------------ Helper Functions ------------------
+# Helper Fncs
 def eye_aspect_ratio(eye):
     A = distance.euclidean(eye[1], eye[5])
     B = distance.euclidean(eye[2], eye[4])
@@ -75,7 +75,7 @@ def mouth_aspect_ratio(mouth):
     return (A + B) / (2.0 * C)
 
 
-# ------------------ Load Known Driver Faces ------------------
+#  Load Known Driver Faces 
 print("Loading known faces...")
 known_face_encodings = []
 known_face_names = []
@@ -93,7 +93,7 @@ for filename in os.listdir("known_faces"):
 print(f"Loaded {len(known_face_names)} authorized drivers: {known_face_names}")
 
 
-# ------------------ Thresholds ------------------
+#  Thresholds:-
 EYE_AR_THRESH = 0.25
 EYE_AR_CONSEC_FRAMES = 10
 YAWN_MAR_THRESH = 0.5
@@ -107,7 +107,7 @@ drowsiness_start_time = None
 call_made_for_event = False
 
 
-# ------------------ Initialize Dlib & Camera ------------------
+#  Initialize Dlib & Camera 
 detect = dlib.get_frontal_face_detector()
 predict = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
 (lStart, lEnd) = face_utils.FACIAL_LANDMARKS_68_IDXS["left_eye"]
@@ -125,7 +125,7 @@ print("Camera started. Press 'q' to quit.")
 cv2.namedWindow("Frame", cv2.WINDOW_NORMAL)
 
 
-# ------------------ Main Loop ------------------
+#  Main Loop 
 while True:
     frame = picam2.capture_array()
     frame = cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
@@ -134,7 +134,7 @@ while True:
     alert_condition_met = False
     face_found = len(subjects) > 0
 
-    # ---- Case 1: No face detected (Driver distracted) ----
+    # Case 1: No face detected (Driver distracted) 
     if not face_found:
         no_face_flag += 1
         if no_face_flag >= NO_FACE_CONSEC_FRAMES:
@@ -146,7 +146,7 @@ while True:
         no_face_flag = 0
         subject = subjects[0]
 
-        # ---- Driver Authentication ----
+        #Driver Authentication
         face_locations = [(subject.top(), subject.right(), subject.bottom(), subject.left())]
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
@@ -165,13 +165,13 @@ while True:
         cv2.putText(frame, f"Driver: {current_driver}", (10, 30),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
 
-        # ---- Alert if Unauthorized Driver ----
+        # Alert if Unauthorized Driver 
         if current_driver == "Unknown" and not guest_alert_sent:
             send_phone_alarm("An unauthorized driver is operating the vehicle.",
                              title="Security Alert", priority=0)
             guest_alert_sent = True
 
-        # ---- Detect Drowsiness ----
+        # Detect Drowsiness 
         shape = predict(gray, subject)
         shape = face_utils.shape_to_np(shape)
 
@@ -190,7 +190,7 @@ while True:
         cv2.drawContours(frame, [rightEyeHull], -1, (0, 255, 0), 1)
         cv2.drawContours(frame, [mouthHull], -1, (0, 255, 0), 1)
 
-        # ---- Eye Closure ----
+        # Eye Closure 
         if ear < EYE_AR_THRESH:
             eye_flag += 1
             if eye_flag >= EYE_AR_CONSEC_FRAMES:
@@ -200,7 +200,7 @@ while True:
         else:
             eye_flag = 0
 
-        # ---- Yawning ----
+        #  Yawning 
         if mar > YAWN_MAR_THRESH:
             yawn_flag += 1
             if yawn_flag >= YAWN_CONSEC_FRAMES:
@@ -210,7 +210,7 @@ while True:
         else:
             yawn_flag = 0
 
-    # ------------------ Handle Alerts ------------------
+    #  Handle Alerts 
     if alert_condition_met:
         GPIO.output(LED_PIN, GPIO.HIGH)
         pwm.start(50)
@@ -233,7 +233,7 @@ while True:
         drowsiness_start_time = None
         call_made_for_event = False
 
-    # ------------------ Display ------------------
+    #  Display 
     cv2.imshow("Frame", frame)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
